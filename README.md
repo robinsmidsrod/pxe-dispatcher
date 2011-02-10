@@ -23,3 +23,20 @@ The gPXE scripts should be named $root_url/gpxe/<lowercase-mac-without-colons>.g
 
 $root_url is the url mentioned in the dhcpd.conf chunk above minus
 '/gpxe.cgi'.
+
+AUTHOR
+------
+
+Robin Smidsrød <robin@smidsrod.no>
+
+COPYRIGHT
+---------
+
+Copyright (C) Robin Smidsrød. All rights reserved.
+
+This script is licensed under the same terms as the gPXE project itself.
+
+SEE ALSO
+--------
+
+* http://www.etherboot.org/wiki/
