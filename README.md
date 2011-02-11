@@ -41,4 +41,5 @@ This script is licensed under the same terms as the gPXE project itself.
 SEE ALSO
 --------
 
-* http://www.etherboot.org/wiki/
+* [Etherboot/gPXE project page](http://www.etherboot.org/wiki/)
+* [gPXE command line overview](http://www.etherboot.org/wiki/commandline)
