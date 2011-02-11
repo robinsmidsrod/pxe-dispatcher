@@ -16,13 +16,15 @@ project.
             filename "undionly.kpxe";
     }
 
-If you also install pxelinux.0 in the same folder as gpxe.cgi, it will try
-to load it unless any other script was found.
-
 The gPXE scripts should be named $root_url/gpxe/<lowercase-mac-without-colons>.gpxe.
+
+If $root_url/gpxe/default.gpxe is found, it is run if no MAC-specific script is found.
 
 $root_url is the url mentioned in the dhcpd.conf chunk above minus
 '/gpxe.cgi'.
+
+If you also install pxelinux.0 in the same folder as gpxe.cgi, it will try
+to load it unless any other script was found.
 
 AUTHOR
 ------
