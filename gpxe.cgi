@@ -52,25 +52,36 @@ EOM
         return 1;
     }
     
-    # Abort boot sequence if no pxelinux.0 found
-    unless ( -r 'pxelinux.0' ) {
-        print $q->header('text/plain'), <<'EOM';
+    # Boot with gpxe/default.gpxe
+    if ( -r 'gpxe/default.gpxe' ) {
+        print $q->header('text/plain'), <<"EOM";
 #!gpxe
 echo
-echo URL unavailable: $url
-echo No PXELinux available, aborting netboot
-exit
+echo Loading gpxe/default.gpxe for $mac
+chain $root_url/gpxe/default.gpxe
 EOM
         return 1;
     }
-        
+
     # Boot with default PXELinux
-    print $q->header('text/plain'), <<"EOM";
+    if ( -r 'pxelinux.0' ) {
+        print $q->header('text/plain'), <<"EOM";
 #!gpxe
 echo
 echo URL unavailable: $url
 echo Loading PXELinux for $mac
 chain $root_url/pxelinux.0
+EOM
+        return 1;
+    }
+
+    # Abort boot sequence if no pxelinux.0 found
+    print $q->header('text/plain'), <<'EOM';
+#!gpxe
+echo
+echo URL unavailable: $url
+echo No PXELinux available, aborting netboot
+exit
 EOM
     return 1;
 }
