@@ -5,11 +5,14 @@ use warnings;
 
 use CGI ();
 
+# Change this line if you rename the script
+my $myself = "gpxe.cgi";
+
 my $q = CGI->new();
 
 # Build root url of script
 my $root_url = $q->url( -path_info => 1 );
-$root_url =~ s{/gpxe\.cgi$}{}; # Strip /gpxe.cgi
+$root_url =~ s{/\Q$myself\E$}{}; # Strip out filename of this script from URL
 
 # If mac query param is present, and looks like a mac address,
 # try to load specific script, else load chaining script
@@ -28,7 +31,7 @@ sub no_params {
     print $q->header('text/plain'), <<"EOM";
 #!gpxe
 echo Loading gPXE script for \${net0/mac}
-chain $root_url/gpxe.cgi?mac=\${net0/mac}
+chain $root_url/$myself?uuid=\${uuid}&mac=\${net0/mac}&ip=\${net0/ip}&hostname=\${hostname:uristring}&serial=\${serial:uristring}&manufacturer=\${manufacturer:uristring}&product=\${product:uristring}
 EOM
     return 1;
 }
