@@ -6,7 +6,9 @@ use warnings;
 use CGI ();
 
 # Change this line if you rename the script
-my $myself = "gpxe.cgi";
+my $myself = "pxeboot.cgi";
+my $subdir = "pxeboot";
+my $ext = "pxe";
 
 my $q = CGI->new();
 
@@ -26,42 +28,42 @@ else {
 
 exit;
 
-# Send default gPXE script that chainloads and calls script again with MAC address
+# Send default iPXE script that chainloads and calls script again with MAC address
 sub no_params {
     print $q->header('text/plain'), <<"EOM";
 #!gpxe
-echo Loading gPXE script for \${net0/mac}
+echo Loading PXE script for \${net0/mac}
 chain $root_url/$myself?uuid=\${uuid}&mac=\${net0/mac}&ip=\${net0/ip}&hostname=\${hostname:uristring}&serial=\${serial:uristring}&manufacturer=\${manufacturer:uristring}&product=\${product:uristring}
 EOM
     return 1;
 }
 
-# Chainload $root_url/gpxe/<mac-without-colons>.gpxe
+# Chainload $root_url/$subdir/<mac-without-colons>.$ext
 # or $root_url/pxelinux.0 (if exists)
 # or just exit (if none found)
 sub script_for_mac {
     my ($mac) = @_;
     my $filename = $mac;
     $filename =~ s/://g;
-    $filename = "gpxe/$filename.gpxe";
+    $filename = "$subdir/$filename.$ext";
     my $url = "$root_url/$filename";
     if ( -r $filename ) {
         print $q->header('text/plain'), <<"EOM";
 #!gpxe
 echo
-echo Loading gPXE script for $mac
+echo Loading PXE script for $mac
 chain $url
 EOM
         return 1;
     }
-    
-    # Boot with gpxe/default.gpxe
-    if ( -r 'gpxe/default.gpxe' ) {
+
+    # Boot with pxeboot/default.$ext
+    if ( -r "$subdir/default.$ext" ) {
         print $q->header('text/plain'), <<"EOM";
 #!gpxe
 echo
-echo Loading gpxe/default.gpxe for $mac
-chain $root_url/gpxe/default.gpxe
+echo Loading $subdir/default.$ext for $mac
+chain $root_url/$subdir/default.$ext
 EOM
         return 1;
     }
