@@ -1,54 +1,83 @@
-#!/usr/bin/perl
+#!/home/robin/perl5/perlbrew/perls/current/bin/perl
 
-use strict;
-use warnings;
-
-use CGI ();
-
-# Change this line if you rename the script
-my $myself = "pxeboot.cgi";
-my $subdir = "pxeboot";
-my $ext = "pxe";
-
-my $q = CGI->new();
-
-# Build root url of script
-my $root_url = $q->url( -path_info => 1 );
-$root_url =~ s{/\Q$myself\E$}{}; # Strip out filename of this script from URL
-
-# If mac query param is present, and looks like a mac address,
-# try to load specific script, else load chaining script
-my $hex = qr/[0-9a-f]{2}/;
-if ( $q->param('mac') and lc( $q->param('mac') ) =~ m{\A(?:$hex:){5}$hex\Z} ) {
-    script_for_mac( lc( $q->param('mac') ) );
+BEGIN {
+    # Set to 'development' for more debug output
+    $ENV{'MOJO_MODE'} = 'production';
 }
-else {
-    no_params();
-}
+
+use Mojolicious::Lite;
+
+app->defaults({
+    format               => 'text',
+    pxe_script_extension => 'pxe',
+    pxe_script_subdir    => 'pxeboot',
+    script_name          => 'pxeboot.cgi', # Change this line if you rename the script
+});
+
+get '/' => sub {
+    my ($self) = @_;
+    # Build base url of script
+    my $base_url = resolve_base_url($self);
+    # If mac query param is present, and looks like a mac address,
+    # try to load specific script, else load chaining script
+    my $mac = resolve_mac($self->req->params);
+    script_for_mac( $self, $mac ) if $mac;
+    no_params($self);
+};
+
+app->start;
 
 exit;
 
+# Resolve base URL from HTTP request URL
+sub resolve_base_url {
+    my ($self) = @_;
+    my $base_url = $self->req->url->clone->to_abs->query('')->fragment('');
+    my $path = $base_url->path;
+    my $myself = $self->stash('script_name');
+    $path =~ s{/\Q$myself\E$}{}; # Strip out filename of this script from URL
+    $base_url = $base_url->path($path)->to_string;
+    $base_url =~ s{\?$}{}; # Get rid of question mark
+    $self->app->log->debug($base_url);
+    return $base_url;
+}
+
+# Resolve MAC address from HTTP request query params
+sub resolve_mac {
+    my ($params) = @_;
+    my $hex = qr/[0-9a-f]{2}/;
+    return unless $params->param('mac')
+              and lc( $params->param('mac') ) =~ m{\A(?:$hex:){5}$hex\Z};
+    return lc $params->param('mac');
+}
+
 # Send default iPXE script that chainloads and calls script again with MAC address
 sub no_params {
-    print $q->header('text/plain'), <<"EOM";
+    my ($self) = @_;
+    my $base_url = resolve_base_url($self);
+    my $myself = $self->stash('script_name');
+    $self->render_text( <<"EOM" );
 #!gpxe
 echo Loading PXE script for \${mac}
-chain $root_url/$myself?uuid=\${uuid}&mac=\${mac}&busid=\${busid}&ip=\${ip}&hostname=\${hostname:uristring}&serial=\${serial:uristring}&asset=\${asset:uristring}&manufacturer=\${manufacturer:uristring}&product=\${product:uristring}
+chain $base_url/$myself?uuid=\${uuid}&mac=\${mac}&busid=\${busid}&ip=\${ip}&hostname=\${hostname:uristring}&serial=\${serial:uristring}&asset=\${asset:uristring}&manufacturer=\${manufacturer:uristring}&product=\${product:uristring}
 EOM
     return 1;
 }
 
-# Chainload $root_url/$subdir/<mac-without-colons>.$ext
+# Chainload $base_url/$subdir/<mac-without-colons>.$ext
 # or $root_url/pxelinux.0 (if exists)
 # or just exit (if none found)
 sub script_for_mac {
-    my ($mac) = @_;
+    my ( $self, $mac ) = @_;
+    my $ext = $self->stash('pxe_script_extension');
+    my $subdir = $self->stash('pxe_script_subdir');
     my $filename = $mac;
     $filename =~ s/://g;
     $filename = "$subdir/$filename.$ext";
-    my $url = "$root_url/$filename";
+    my $base_url = resolve_base_url($self);
+    my $url = "$base_url/$filename";
     if ( -r $filename ) {
-        print $q->header('text/plain'), <<"EOM";
+        $self->render_text( <<"EOM" );
 #!gpxe
 echo
 echo Loading PXE script for $mac
@@ -59,29 +88,29 @@ EOM
 
     # Boot with pxeboot/default.$ext
     if ( -r "$subdir/default.$ext" ) {
-        print $q->header('text/plain'), <<"EOM";
+        $self->render_text( <<"EOM" );
 #!gpxe
 echo
 echo Loading $subdir/default.$ext for $mac
-chain $root_url/$subdir/default.$ext
+chain $base_url/$subdir/default.$ext
 EOM
         return 1;
     }
 
     # Boot with default PXELinux
     if ( -r 'pxelinux.0' ) {
-        print $q->header('text/plain'), <<"EOM";
+        $self->render_text( <<"EOM" );
 #!gpxe
 echo
 echo URL unavailable: $url
 echo Loading PXELinux for $mac
-chain $root_url/pxelinux.0
+chain $base_url/pxelinux.0
 EOM
         return 1;
     }
 
     # Abort boot sequence if no pxelinux.0 found
-    print $q->header('text/plain'), <<'EOM';
+    $self->render_text( <<"EOM" );
 #!gpxe
 echo
 echo URL unavailable: $url
