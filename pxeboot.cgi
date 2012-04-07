@@ -32,8 +32,8 @@ exit;
 sub no_params {
     print $q->header('text/plain'), <<"EOM";
 #!gpxe
-echo Loading PXE script for \${net0/mac}
-chain $root_url/$myself?uuid=\${uuid}&mac=\${net0/mac}&ip=\${net0/ip}&hostname=\${hostname:uristring}&serial=\${serial:uristring}&manufacturer=\${manufacturer:uristring}&product=\${product:uristring}
+echo Loading PXE script for \${mac}
+chain $root_url/$myself?uuid=\${uuid}&mac=\${mac}&busid=\${busid}&ip=\${ip}&hostname=\${hostname:uristring}&serial=\${serial:uristring}&asset=\${asset:uristring}&manufacturer=\${manufacturer:uristring}&product=\${product:uristring}
 EOM
     return 1;
 }
